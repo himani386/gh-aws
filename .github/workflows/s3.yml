@@ -1,0 +1,45 @@
+name: Create S3 Bucket
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-bucket:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Verify AWS Login
+        run: aws sts get-caller-identity
+
+      - name: Create S3 Bucket
+        run: |
+          aws s3api create-bucket \
+            --bucket ${{ secrets.BUCKET_NAME }} \
+            --region ${{ secrets.AWS_REGION }} \
+            --create-bucket-configuration LocationConstraint=${{ secrets.AWS_REGION }}
+
+      - name: Enable Versioning
+        run: |
+          aws s3api put-bucket-versioning \
+            --bucket ${{ secrets.BUCKET_NAME }} \
+            --versioning-configuration Status=Enabled
+
+      - name: Block Public Access
+        run: |
+          aws s3api put-public-access-block \
+            --bucket ${{ secrets.BUCKET_NAME }} \
+            --public-access-block-configuration \
+            BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+
+      - name: Success
+        run: echo "Bucket Created Successfully"
